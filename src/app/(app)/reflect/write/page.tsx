@@ -1,6 +1,7 @@
+import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/data";
 import { DAILY_RESET_PROMPTS, DEEP_PROMPTS, promptForDate } from "@/lib/prompts";
-import { todayIn } from "@/lib/time";
+import { isoDaysAgo, pickOne, todayIn } from "@/lib/time";
 import { JOURNAL_MODES, type JournalEntry, type JournalMode } from "@/lib/types";
 import { JournalEditor } from "@/components/reflect/JournalEditor";
 import { LookingBackPicker } from "@/components/reflect/LookingBackPicker";
@@ -17,12 +18,19 @@ export default async function WritePage({ searchParams }: { searchParams: Promis
       const { data: older } = await supabase
         .from("journal_entries")
         .select("id,title,body,created_at,mode")
-        .lt("created_at", new Date(Date.now() - 14 * 86400000).toISOString())
+        .lt("created_at", isoDaysAgo(14))
         .order("created_at", { ascending: false })
         .limit(60);
       return <LookingBackPicker entries={older ?? []} />;
     }
-    const { data: revisit } = await supabase.from("journal_entries").select("id,title,body,created_at").eq("id", sp.revisit).maybeSingle<Pick<JournalEntry, "id" | "title" | "body" | "created_at">>();
+    let revisitId = sp.revisit;
+    if (revisitId === "random") {
+      // "Let chance choose": any entry at least two weeks old.
+      const { data: ids } = await supabase.from("journal_entries").select("id").lt("created_at", isoDaysAgo(14)).limit(500);
+      revisitId = pickOne(ids ?? [])?.id ?? "";
+    }
+    if (!/^[0-9a-f-]{36}$/i.test(revisitId)) redirect("/reflect/write?mode=looking_back");
+    const { data: revisit } = await supabase.from("journal_entries").select("id,title,body,created_at").eq("id", revisitId).maybeSingle<Pick<JournalEntry, "id" | "title" | "body" | "created_at">>();
     return <JournalEditor mode={mode} prompts={[]} revisit={revisit} />;
   }
 
@@ -32,7 +40,7 @@ export default async function WritePage({ searchParams }: { searchParams: Promis
       : mode === "daily_reset"
         ? DAILY_RESET_PROMPTS
         : mode === "deep"
-          ? [DEEP_PROMPTS[new Date().getDate() % DEEP_PROMPTS.length]!]
+          ? [DEEP_PROMPTS[Number(todayIn(profile.timezone).slice(8)) % DEEP_PROMPTS.length]!]
           : [];
   return <JournalEditor mode={mode} prompts={prompts} />;
 }

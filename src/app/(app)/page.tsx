@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Hourglass } from "lucide-react";
 import { requireViewer } from "@/lib/data";
-import { greetingFor, hourIn, todayIn, formatDate, relativeTime } from "@/lib/time";
+import { greetingFor, hourIn, todayIn, formatDate, relativeTime, isoDaysAgo, isoNow } from "@/lib/time";
 import { promptForDate } from "@/lib/prompts";
 import { pickMoment, type MomentCandidate } from "@/lib/rediscovery";
 import { MEMORY_KIND_LABELS, type Capsule, type MemoryKind } from "@/lib/types";
@@ -13,8 +13,8 @@ export default async function Sanctuary() {
   const { supabase, profile } = await requireViewer();
   const today = todayIn(profile.timezone);
   const hour = hourIn(profile.timezone);
-  const since = new Date(Date.now() - 14 * 86400000).toISOString();
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+  const since = isoDaysAgo(14);
+  const monthAgo = isoDaysAgo(30);
 
   const [recent, older, capsules, mems14, journal14, msgs14, newLinks] = await Promise.all([
     supabase.from("memories").select("id,kind,title,created_at,occurred_on").order("created_at", { ascending: false }).limit(4),
@@ -24,11 +24,11 @@ export default async function Sanctuary() {
       .lt("created_at", monthAgo)
       .order("created_at", { ascending: false })
       .limit(400),
-    supabase.from("capsules").select("id,title,open_at,sealed_at,opened_at").not("sealed_at", "is", null).is("opened_at", null).lte("open_at", new Date().toISOString()).returns<Capsule[]>(),
+    supabase.from("capsules").select("id,title,open_at,sealed_at,opened_at").not("sealed_at", "is", null).is("opened_at", null).lte("open_at", isoNow()).returns<Capsule[]>(),
     supabase.from("memories").select("created_at").gte("created_at", since).limit(500),
     supabase.from("journal_entries").select("created_at").gte("created_at", since).limit(500),
     supabase.from("messages").select("created_at").eq("role", "user").gte("created_at", since).limit(1000),
-    supabase.from("memory_links").select("id", { count: "exact", head: true }).eq("status", "approved").gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()),
+    supabase.from("memory_links").select("id", { count: "exact", head: true }).eq("status", "approved").gte("created_at", isoDaysAgo(7)),
   ]);
 
   // A Moment From Then

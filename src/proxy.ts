@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/signin", "/offline", "/manifest.webmanifest", "/sw.js", "/icon", "/apple-icon", "/setup"];
+const PUBLIC_PATHS = ["/signin", "/offline", "/manifest.webmanifest", "/sw.js", "/icon", "/icons", "/apple-icon", "/setup"];
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

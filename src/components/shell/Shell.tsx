@@ -26,10 +26,6 @@ export function Shell({
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    setCompass(false);
-  }, [pathname]);
-
   // Keyboard: ⌘K compass, ⌘J capture, "g" then a room key to jump.
   const onKey = useCallback(
     (e: KeyboardEvent) => {
@@ -50,7 +46,10 @@ export function Shell({
       if (e.key === "g") {
         const next = (ev: KeyboardEvent) => {
           const room = ROOMS.find((r) => r.key === ev.key);
-          if (room) router.push(room.href);
+          if (room) {
+            setCompass(false);
+            router.push(room.href);
+          }
           window.removeEventListener("keydown", next, true);
         };
         window.addEventListener("keydown", next, true);
@@ -90,7 +89,7 @@ export function Shell({
                 {pendingProposals} to review
               </Link>
             )}
-            <AmbientSound enabled={profile.sound} world={profile.ambient_world} />
+            {profile.sound && <AmbientSound world={profile.ambient_world} />}
             <button
               onClick={() => setCapture(true)}
               className="hidden h-9 items-center gap-2 rounded-full border border-line px-3.5 text-[13px] text-ink-soft transition-colors hover:border-line-strong hover:text-ink sm:inline-flex"
@@ -181,6 +180,7 @@ export function Shell({
                     >
                       <Link
                         href={room.href}
+                        onClick={() => setCompass(false)}
                         className="group flex items-baseline justify-between gap-6 py-4 sm:py-5"
                         aria-current={active ? "page" : undefined}
                       >

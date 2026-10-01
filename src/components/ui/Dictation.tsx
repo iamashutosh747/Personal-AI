@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClientValue } from "@/lib/hooks";
 import { Mic, MicOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -29,17 +30,12 @@ function getRecognition(): SpeechRecognitionLike | null {
  * instead of failing silently.
  */
 export function Dictation({ onText, className }: { onText: (text: string) => void; className?: string }) {
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const supported = useClientValue<boolean | null>(() => Boolean(getRecognition()), null);
   const [listening, setListening] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const rec = useRef<SpeechRecognitionLike | null>(null);
-  const onTextRef = useRef(onText);
-  onTextRef.current = onText;
 
-  useEffect(() => {
-    setSupported(Boolean(getRecognition()));
-    return () => rec.current?.stop();
-  }, []);
+  useEffect(() => () => rec.current?.stop(), []);
 
   function toggle() {
     if (listening) {
@@ -60,7 +56,7 @@ export function Dictation({ onText, className }: { onText: (text: string) => voi
         const res = e.results[i]!;
         if (res.isFinal) finalText += res[0].transcript;
       }
-      if (finalText.trim()) onTextRef.current(finalText.trim());
+      if (finalText.trim()) onText(finalText.trim());
     };
     r.onend = () => setListening(false);
     r.onerror = (e) => {

@@ -50,3 +50,20 @@ export function relativeTime(iso: string, now = new Date()): string {
   if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} d ago`;
   return formatDate(iso, { day: "numeric", month: "short", year: diff > 86400 * 300 ? "numeric" : undefined });
 }
+
+/** Local midnight on `date` (YYYY-MM-DD) for a browser whose Date#getTimezoneOffset() is `offsetMinutes`. */
+export function localMidnightUtc(date: string, offsetMinutes: number) {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d) + offsetMinutes * 60000);
+}
+
+// Request-time clock helpers. Server components render once per request, so
+// reading the clock there is correct; these keep that intent explicit.
+export const nowMs = () => Date.now();
+export const isoNow = () => new Date().toISOString();
+export const isoDaysAgo = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
+export const isPast = (iso: string) => Date.parse(iso) <= Date.now();
+
+export function pickOne<T>(list: T[]): T | undefined {
+  return list.length ? list[Math.floor(Math.random() * list.length)] : undefined;
+}

@@ -16,7 +16,7 @@ export function LookingBackPicker({ entries }: { entries: { id: string; title: s
       ) : (
         <>
           <Link
-            href={`/reflect/write?mode=looking_back&revisit=${entries[Math.floor(Math.random() * entries.length)]!.id}`}
+            href="/reflect/write?mode=looking_back&revisit=random"
             className="mt-6 inline-block text-[14px] text-accent hover:underline"
           >
             Let chance choose →

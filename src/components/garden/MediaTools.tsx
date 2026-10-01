@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useClientValue } from "@/lib/hooks";
 import { ImagePlus, Mic, Square, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -62,13 +63,13 @@ function pickAudioType() {
 
 /** Record a voice note in the browser. Nothing leaves the device until you keep it. */
 export function VoiceRecorder({ onRecorded, disabled }: { onRecorded: (file: File) => void; disabled?: boolean }) {
-  const [state, setState] = useState<"idle" | "recording" | "unsupported" | "denied">("idle");
+  const [state, setState] = useState<"idle" | "recording" | "denied">("idle");
   const [seconds, setSeconds] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const supported = useClientValue(() => pickAudioType() !== null && Boolean(navigator.mediaDevices?.getUserMedia), true);
 
   useEffect(() => {
-    if (pickAudioType() === null || !navigator.mediaDevices?.getUserMedia) setState("unsupported");
     return () => {
       if (timer.current) clearInterval(timer.current);
       rec.current?.stream.getTracks().forEach((t) => t.stop());
@@ -105,7 +106,7 @@ export function VoiceRecorder({ onRecorded, disabled }: { onRecorded: (file: Fil
     setState("idle");
   }
 
-  if (state === "unsupported") return <span className="text-[12px] text-ink-faint">Voice recording isn’t supported in this browser.</span>;
+  if (!supported) return <span className="text-[12px] text-ink-faint">Voice recording isn’t supported in this browser.</span>;
 
   return (
     <span className="inline-flex items-center gap-3">

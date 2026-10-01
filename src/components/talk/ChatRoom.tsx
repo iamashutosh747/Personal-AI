@@ -180,11 +180,13 @@ export function ChatRoom({
   // A conversation started from the Sanctuary arrives with an unanswered message.
   useEffect(() => {
     if (autoStarted.current || !aiReady || offRecord) return;
-    const last = messages[messages.length - 1];
-    if (last?.role === "user") {
+    if (messages[messages.length - 1]?.role !== "user") return;
+    // Deferred so a strict-mode remount cancels the first attempt instead of sending twice.
+    const t = setTimeout(() => {
       autoStarted.current = true;
       void send();
-    }
+    }, 0);
+    return () => clearTimeout(t);
   }, [aiReady, offRecord, messages, send]);
 
   const lastAssistantStreaming = streaming && messages[messages.length - 1]?.streaming;

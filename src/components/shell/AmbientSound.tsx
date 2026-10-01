@@ -8,20 +8,13 @@ import type { World } from "@/lib/types";
  * Generated ambient sound (Web Audio), so no audio files are downloaded.
  * Off until you press play; never starts on its own.
  */
-export function AmbientSound({ enabled, world }: { enabled: boolean; world: World }) {
+export function AmbientSound({ world }: { world: World }) {
   const [playing, setPlaying] = useState(false);
   const ctxRef = useRef<AudioContext | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
 
+  // Turning sound off in Settings unmounts this button, which stops playback.
   useEffect(() => () => stopRef.current?.(), []);
-  useEffect(() => {
-    if (!enabled && playing) {
-      stopRef.current?.();
-      setPlaying(false);
-    }
-  }, [enabled, playing]);
-
-  if (!enabled) return null;
 
   function start() {
     const ctx = ctxRef.current ?? new AudioContext();
