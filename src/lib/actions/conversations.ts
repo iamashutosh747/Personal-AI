@@ -105,3 +105,25 @@ export async function conversationToJournal(id: string) {
   revalidatePath("/reflect");
   redirect(`/reflect/${entry.id}`);
 }
+
+/** Open a conversation about a journal entry. The entry text is quoted in your first message, visibly. */
+export async function discussEntry(entryId: string) {
+  const { supabase } = await requireViewer();
+  if (!uuid.safeParse(entryId).success) return;
+  const { data: entry } = await supabase.from("journal_entries").select("id,title,body,mode").eq("id", entryId).single();
+  if (!entry || entry.mode === "unfiltered") return;
+  const quoted = entry.body.slice(0, 12000).split("\n").map((l: string) => `> ${l}`).join("\n");
+  const { data: convo } = await supabase
+    .from("conversations")
+    .insert({ title: `Thinking through: ${titleFrom(entry.title ?? entry.body).slice(0, 150)}`, journal_entry_id: entry.id })
+    .select("id")
+    .single();
+  if (!convo) return;
+  await supabase.from("messages").insert({
+    conversation_id: convo.id,
+    role: "user",
+    content: `I'd like to think through something I wrote in my journal:\n\n${quoted}`,
+  });
+  revalidatePath("/talk");
+  redirect(`/talk/${convo.id}`);
+}

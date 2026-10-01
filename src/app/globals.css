@@ -210,6 +210,7 @@ body {
 }
 .prose-inner p { margin: 0 0 0.9em; }
 .prose-inner p:last-child { margin-bottom: 0; }
+.prose-inner.preserve p { white-space: pre-wrap; }
 .prose-inner ul, .prose-inner ol { margin: 0 0 0.9em 1.2em; }
 .prose-inner ul { list-style: disc; }
 .prose-inner ol { list-style: decimal; }

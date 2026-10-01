@@ -90,7 +90,18 @@ export async function linkMemories(fromId: string, toId: string, note?: string):
   const { error } = await supabase
     .from("memory_links")
     .insert({ from_id: fromId, to_id: toId, note: note?.slice(0, 500) || null, origin: "manual", status: "approved" });
-  if (error) return { ok: false, error: error.code === "23505" ? "These are already connected" : "Could not connect them" };
+  if (error?.code === "23505") {
+    // A previously declined suggestion for this pair: your own connection replaces it.
+    const { data: revived } = await supabase
+      .from("memory_links")
+      .update({ status: "approved", origin: "manual", note: note?.slice(0, 500) || null })
+      .eq("status", "rejected")
+      .or(`and(from_id.eq.${fromId},to_id.eq.${toId}),and(from_id.eq.${toId},to_id.eq.${fromId})`)
+      .select("id");
+    if (!revived?.length) return { ok: false, error: "These are already connected" };
+  } else if (error) {
+    return { ok: false, error: "Could not connect them" };
+  }
   revalidateMemories(fromId);
   revalidatePath(`/garden/${toId}`);
   return { ok: true };
@@ -179,4 +190,16 @@ export async function markSurfaced(id: string) {
   const { supabase } = await requireViewer();
   if (!uuid.safeParse(id).success) return;
   await supabase.from("memories").update({ last_surfaced_at: new Date().toISOString() }).eq("id", id);
+}
+
+/** Approve or decline an AI-suggested connection. Declined ones are remembered so they aren't suggested again. */
+export async function resolveSuggestedLink(linkId: string, approve: boolean) {
+  const { supabase } = await requireViewer();
+  if (!uuid.safeParse(linkId).success) return;
+  await supabase
+    .from("memory_links")
+    .update({ status: approve ? "approved" : "rejected" })
+    .eq("id", linkId)
+    .eq("status", "suggested");
+  revalidateMemories();
 }
