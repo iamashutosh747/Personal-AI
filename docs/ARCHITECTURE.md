@@ -120,7 +120,7 @@ Typography carries the identity:
  │ Postgres + RLS + pgvector        │         │ tool use for memory proposals │
  │ RPC: retrieve_context,           │         └───────────────────────────────┘
  │      consume_ai_quota,           │         ┌──── Voyage AI (optional) ─────┐
- │      open_capsule, delete_me     │         │ embeddings for semantic recall│
+ │      read_capsule, delete_my_data│         │ embeddings for semantic recall│
  │ Storage: private "media" bucket  │         └───────────────────────────────┘
  └──────────────────────────────────┘
 ```
@@ -128,8 +128,8 @@ Typography carries the identity:
 **How a conversation turn works**
 
 1. The browser posts `{conversationId, text}` to `/api/chat`.
-2. The route checks the session and calls `consume_ai_quota` (rate limit in
-   Postgres, so it works on serverless hosts).
+2. The route checks the session and calls `consume_ai_quota` (a per-kind rate
+   limit kept in Postgres, so it works on serverless hosts).
 3. It stores your message, then calls `retrieve_context(query, …)`, which
    searches **only** rows you own that are marked AI-visible and that the
    thread's memory setting allows. Ranking blends full-text relevance,
@@ -157,9 +157,10 @@ Typography carries the identity:
 - *Proposals via tool use, not background extraction.* Claude proposes a
   memory in context, where it can explain why, and you approve it in one tap.
   No hidden pipeline mines your chats.
-- *No service-role key at runtime.* Every query runs as you, so RLS is the
-  security boundary. Account deletion uses a `security definer` function that
-  can only ever delete `auth.uid()`.
+- *Every query runs as you.* RLS is the security boundary. The service-role
+  key has one optional use: removing the login itself when you choose
+  "Delete everything" (your rows are deleted as you, under RLS, and your files
+  through the Storage API, before it is used).
 
 ---
 
@@ -180,8 +181,9 @@ Full DDL: `supabase/migrations/`. Every table has `user_id` → `auth.users` wit
 | `memory_proposals` | Candidates awaiting approval | `action (create / update / forget)`, `target_memory_id`, `title`, `body`, `kind`, `tags[]`, `reason`, `source_type`, `source_id`, `status` |
 | `observations` | AI-generated patterns & summaries | `kind`, `label (observation / hypothesis)`, `statement`, `sources jsonb` (ids + excerpts), `status (pending / accepted / rejected / corrected)`, `correction`, `period_start/end` |
 | `self_attributes` | The Mirror | `kind (value / interest / goal / favourite / milestone / priority)`, `label`, `detail`, `rank`, `since`, `until`, `origin (self / observation)` |
-| `capsules` | Letters to the future | `title`, `letter` (column-hidden until open), `open_on`, `sealed_at`, `opened_at`, `memory_ids[]`, `goals[]` |
+| `capsules` | Letters to the future | `title`, `letter` (column-hidden; read only through `read_capsule`), `open_at`, `sealed_at`, `opened_at`, `memory_ids[]`, `goals[]` |
 | `ai_usage` | Rate limiting | `kind`, `created_at` |
+| `signup_allowlist` | Extra addresses allowed to sign up after the owner | `email` (no API access) |
 
 **Six-way memory separation, mapped to storage**
 

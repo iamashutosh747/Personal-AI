@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { setMemoryFlags } from "@/lib/actions/memories";
 import { cn } from "@/lib/cn";
 
 export function AiToggle({ id, initial, label }: { id: string; initial: boolean; label: string }) {
-  const [on, setOn] = useState(initial);
+  const [saved, setSaved] = useState(initial);
+  const [on, setOn] = useOptimistic(saved);
   const [pending, start] = useTransition();
   return (
     <button
@@ -17,6 +18,7 @@ export function AiToggle({ id, initial, label }: { id: string; initial: boolean;
         start(async () => {
           setOn(!on);
           await setMemoryFlags(id, { ai_access: !on });
+          setSaved(!on);
         })
       }
       className={cn(

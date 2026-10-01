@@ -404,7 +404,7 @@ grant select (id, user_id, title, open_at, sealed_at, opened_at, memory_ids, goa
 
 -- ─────────────────────────────────────────────────────────────── functions
 
--- Rate limit for AI calls. Returns false (and records nothing) when over quota.
+-- Rate limit for AI calls, per kind of call. Returns false (and records nothing) when over quota.
 create or replace function public.consume_ai_quota(p_kind text, p_per_minute int, p_per_day int)
 returns boolean
 language plpgsql
@@ -424,7 +424,7 @@ begin
          count(*) filter (where created_at > now() - interval '1 day')
     into minute_count, day_count
     from public.ai_usage
-   where user_id = uid and created_at > now() - interval '1 day';
+   where user_id = uid and kind = p_kind and created_at > now() - interval '1 day';
   if minute_count >= p_per_minute or day_count >= p_per_day then
     return false;
   end if;
